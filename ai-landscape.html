@@ -1080,6 +1080,7 @@ body.compare-active { padding-bottom: 80px; }
 .lifespan-annot .annot-duration { color: var(--accent3); font-weight: 700; align-self: center; }
 
 /* ===== 增强的重要信息标签 ===== */
+.model-tags { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 .tag-pill {
   display: inline-flex;
   align-items: center;
@@ -1958,7 +1959,7 @@ function renderModels() {
     const compareDisabled = !isSelected && compareSet.size >= 4;
     return `
     <div class="card" data-id="${m.id}">
-      <div>
+      <div class="model-tags">
         <span class="card-series-tag" style="background:${seriesColor}22;color:${seriesColor};border:1px solid ${seriesColor}55">${m.series} 系列</span>
         ${regionTag}${ossTag}
       </div>
@@ -2264,6 +2265,22 @@ function renderProductSidebar() {
   ).join('');
 }
 
+// 产品公司→国家/国旗 映射（仅列非美国的，其余国际公司默认美国）
+const PRODUCT_COUNTRY = {
+  'Open Source':     null, // 开源项目无明确国别，不显示
+  'Luka':            { flag:'🇺🇸', name:'美国' }, // Replika 母公司，美国
+  'Manus AI':        { flag:'🇸🇬', name:'新加坡' },
+  // 以下均为美国公司，不在此列出则默认美国
+};
+// 产品国别标签：中国显示🇨🇳中国，国际按公司显示具体国家（默认美国）
+function productCountryTag(p) {
+  if (p.region === 'cn') return '<span class="tag-pill cn">🇨🇳 中国</span>';
+  const c = PRODUCT_COUNTRY[p.company];
+  if (c === null) return ''; // 无明确国别的不显示
+  if (c) return `<span class="tag-pill intl">${c.flag} ${c.name}</span>`;
+  return '<span class="tag-pill intl">🇺🇸 美国</span>'; // 默认美国
+}
+
 function renderProducts() {
   renderProductSidebar();
   const grid = document.getElementById('products-grid');
@@ -2281,15 +2298,17 @@ function renderProducts() {
     return;
   }
   grid.innerHTML = filtered.map(p => {
-    const regionTag = p.region==='cn' ? '<span class="tag-pill cn">🇨🇳 中国</span>' : '<span class="tag-pill intl">🌍 国际</span>';
-    const ossTag = p.openSource ? ' <span class="tag-pill oss">🔓 开源</span>' : '';
+    // 国别标签：中国显示🇨🇳中国，国际按公司显示具体国家
+    const regionTag = productCountryTag(p);
+    const ossTag = p.openSource ? '<span class="tag-pill oss">🔓 开源</span>' : '';
+    const tagsHtml = (regionTag || ossTag) ? `<div class="model-tags" style="margin-bottom:10px">${regionTag}${ossTag}</div>` : '';
     const urlText = p.url.replace(/^https?:\/\//,'').replace(/\/$/,'');
     return `<div class="card" data-id="${p.id}">
       <div style="margin-bottom:8px"><span class="card-tag tag-intl">${CAT_LABELS[p.cat]}</span></div>
       <div class="card-name">${p.name}</div>
       <div class="card-company">${p.company}</div>
       <div class="card-desc">${p.features}</div>
-      <div style="margin-bottom:10px">${regionTag}${ossTag}</div>
+      ${tagsHtml}
       <a class="card-url" href="${p.url}" target="_blank">${urlText}</a>
     </div>`;
   }).join('');
